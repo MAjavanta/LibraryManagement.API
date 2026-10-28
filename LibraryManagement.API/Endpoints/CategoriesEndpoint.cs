@@ -5,6 +5,8 @@ namespace LibraryManagement.API.Endpoints;
 
 public static class CategoriesEndpoint
 {
+
+    private const string GET_BY_ID = "GetCategoryById";
     private static List<Category> _categories = [
 
         new Category { Id = 1, Name = "Horror"},
@@ -18,10 +20,12 @@ public static class CategoriesEndpoint
             .WithTags("Categories");
 
         group.MapGet("/{id:int}", GetById)
+            .WithName(GET_BY_ID)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
         group.MapGet("/", GetAll)
             .Produces(StatusCodes.Status200OK);
+        group.MapPost("/", Create);
     }
     private static async Task<Ok<List<Category>>> GetAll()
     {
@@ -39,6 +43,26 @@ public static class CategoriesEndpoint
         }
 
         return TypedResults.Ok(category);
+    }
+
+    private static async Task<Results<CreatedAtRoute<Category>, Conflict, BadRequest>> Create(Category category)
+    {
+        if (string.IsNullOrWhiteSpace(category.Name))
+            return TypedResults.BadRequest();
+
+        if (_categories.Any(cat => cat.Id == category.Id))
+            return TypedResults.Conflict();
+
+        if (_categories.Any(cat => cat.Name == category.Name))
+            return TypedResults.Conflict();
+
+        _categories.Add(category);
+
+        return TypedResults.CreatedAtRoute(
+            category,
+            GET_BY_ID,
+            new { Id = category.Id }
+        );
     }
 
 }
