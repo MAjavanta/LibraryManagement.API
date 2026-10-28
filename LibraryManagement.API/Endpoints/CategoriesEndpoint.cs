@@ -22,10 +22,21 @@ public static class CategoriesEndpoint
         group.MapGet("/{id:int}", GetById)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithName(GET_BY_ID);
+
+        group.MapPut("/{id:int}", Update)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapDelete("/{id:int}", Delete)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapGet("/", GetAll);
+
         group.MapPost("/", Create)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
     }
     private static async Task<Ok<List<Category>>> GetAll()
     {
@@ -35,7 +46,8 @@ public static class CategoriesEndpoint
 
     private static async Task<Results<Ok<Category>, ProblemHttpResult>> GetById(int id)
     {
-        var category = _categories.FirstOrDefault(cat => cat.Id == id);
+        var category = _categories.FirstOrDefault(cat =>
+            cat.Id == id);
 
         if (category is null)
         {
@@ -75,6 +87,57 @@ public static class CategoriesEndpoint
             GET_BY_ID,
             new { Id = category.Id }
         );
+    }
+
+    private static async Task<Results<Ok<Category>, ProblemHttpResult>> Update(
+        int id,
+        Category updatedCategory
+    )
+    {
+        if (string.IsNullOrWhiteSpace(updatedCategory.Name))
+            return TypedResults.Problem(
+                detail: "Category name cannot be empty",
+                statusCode: StatusCodes.Status400BadRequest
+            );
+
+        var ogCategory = _categories.FirstOrDefault(cat =>
+            cat.Id == id);
+
+        if (ogCategory is null)
+            return TypedResults.Problem(
+                detail: $"Category with Id {id} cannot be found",
+                statusCode: StatusCodes.Status404NotFound
+            );
+
+        if (_categories.Any(cat =>
+            cat.Id != id &&
+            cat.Name == updatedCategory.Name))
+        {
+            return TypedResults.Problem(
+                detail: $"Category with Name: {updatedCategory.Name} already exists",
+                statusCode: StatusCodes.Status409Conflict
+            );
+        }
+
+        ogCategory.Name = updatedCategory.Name;
+
+        return TypedResults.Ok(ogCategory);
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> Delete(int id)
+    {
+        var category = _categories.FirstOrDefault(cat =>
+            cat.Id == id);
+
+        if (category is null)
+            return TypedResults.Problem(
+                detail: $"Category with Id {id} cannot be found",
+                statusCode: StatusCodes.Status404NotFound
+            );
+
+        _categories.Remove(category);
+
+        return TypedResults.NoContent();
     }
 
 }
