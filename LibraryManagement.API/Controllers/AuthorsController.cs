@@ -1,7 +1,4 @@
-using System;
-using System.Linq.Expressions;
 using LibraryManagement.API.Entities;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryManagement.API.Controllers;
