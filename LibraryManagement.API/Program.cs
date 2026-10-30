@@ -1,4 +1,6 @@
+using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.Endpoints;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddRouting(opt => opt.LowercaseUrls = true);
+builder.Services.AddDbContext<LibraryDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("LibraryDb")
+    ));
 
 var app = builder.Build();
 
