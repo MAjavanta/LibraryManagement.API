@@ -1,5 +1,7 @@
+using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.API.Endpoints;
 
@@ -7,11 +9,6 @@ public static class CategoriesEndpoint
 {
 
     private const string GET_BY_ID = "GetCategoryById";
-    private static List<Category> _categories = [
-
-        new Category { Id = 1, Name = "Horror"},
-        new Category { Id = 2, Name = "Biography"}
-    ];
 
     public static void MapCategories(this IEndpointRouteBuilder app)
     {
@@ -38,16 +35,17 @@ public static class CategoriesEndpoint
             .ProducesProblem(StatusCodes.Status409Conflict);
 
     }
-    private static async Task<Ok<List<Category>>> GetAll()
+    private static async Task<Ok<List<Category>>> GetAll(LibraryDbContext dbContext)
     {
-        var categories = _categories;
+        var categories = await dbContext.Categories.ToListAsync();
         return TypedResults.Ok(categories);
     }
 
-    private static async Task<Results<Ok<Category>, ProblemHttpResult>> GetById(int id)
+    private static async Task<Results<Ok<Category>, ProblemHttpResult>> GetById(
+        int id,
+        LibraryDbContext dbContext)
     {
-        var category = _categories.FirstOrDefault(cat =>
-            cat.Id == id);
+        var category = await dbContext.Categories.FindAsync(id);
 
         if (category is null)
         {
@@ -60,7 +58,9 @@ public static class CategoriesEndpoint
         return TypedResults.Ok(category);
     }
 
-    private static async Task<Results<CreatedAtRoute<Category>, ProblemHttpResult>> Create(Category category)
+    private static async Task<Results<CreatedAtRoute<Category>, ProblemHttpResult>> Create(
+        Category category,
+        LibraryDbContext dbContext)
     {
         if (string.IsNullOrWhiteSpace(category.Name))
             return TypedResults.Problem(
@@ -68,19 +68,14 @@ public static class CategoriesEndpoint
                 statusCode: StatusCodes.Status400BadRequest
             );
 
-        if (_categories.Any(cat => cat.Id == category.Id))
-            return TypedResults.Problem(
-                detail: $"Id {category.Id} is already taken",
-                statusCode: StatusCodes.Status409Conflict
-            );
-
-        if (_categories.Any(cat => cat.Name == category.Name))
+        if (await dbContext.Categories.AnyAsync(cat => cat.Name == category.Name))
             return TypedResults.Problem(
                 detail: $"Category Name: {category.Name} already exists",
                 statusCode: StatusCodes.Status409Conflict
             );
 
-        _categories.Add(category);
+        dbContext.Categories.Add(category);
+        await dbContext.SaveChangesAsync();
 
         return TypedResults.CreatedAtRoute(
             category,
@@ -91,7 +86,8 @@ public static class CategoriesEndpoint
 
     private static async Task<Results<Ok<Category>, ProblemHttpResult>> Update(
         int id,
-        Category updatedCategory
+        Category updatedCategory,
+        LibraryDbContext dbContext
     )
     {
         if (string.IsNullOrWhiteSpace(updatedCategory.Name))
@@ -100,8 +96,7 @@ public static class CategoriesEndpoint
                 statusCode: StatusCodes.Status400BadRequest
             );
 
-        var ogCategory = _categories.FirstOrDefault(cat =>
-            cat.Id == id);
+        var ogCategory = await dbContext.Categories.FindAsync(id);
 
         if (ogCategory is null)
             return TypedResults.Problem(
@@ -109,7 +104,7 @@ public static class CategoriesEndpoint
                 statusCode: StatusCodes.Status404NotFound
             );
 
-        if (_categories.Any(cat =>
+        if (await dbContext.Categories.AnyAsync(cat =>
             cat.Id != id &&
             cat.Name == updatedCategory.Name))
         {
@@ -120,14 +115,16 @@ public static class CategoriesEndpoint
         }
 
         ogCategory.Name = updatedCategory.Name;
+        await dbContext.SaveChangesAsync();
 
         return TypedResults.Ok(ogCategory);
     }
 
-    private static async Task<Results<NoContent, ProblemHttpResult>> Delete(int id)
+    private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
+        int id,
+        LibraryDbContext dbContext)
     {
-        var category = _categories.FirstOrDefault(cat =>
-            cat.Id == id);
+        var category = await dbContext.Categories.FindAsync(id);
 
         if (category is null)
             return TypedResults.Problem(
@@ -135,7 +132,8 @@ public static class CategoriesEndpoint
                 statusCode: StatusCodes.Status404NotFound
             );
 
-        _categories.Remove(category);
+        dbContext.Categories.Remove(category);
+        await dbContext.SaveChangesAsync();
 
         return TypedResults.NoContent();
     }
