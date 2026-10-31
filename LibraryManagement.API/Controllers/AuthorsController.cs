@@ -1,4 +1,5 @@
 using LibraryManagement.API.DataAccess;
+using LibraryManagement.API.DTOs.Authors;
 using LibraryManagement.API.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,17 +10,10 @@ namespace LibraryManagement.API.Controllers;
 [Route("/api/[controller]")]
 public class AuthorsController(LibraryDbContext dbContext) : ControllerBase
 {
-    /* private static List<Author> _authors = [
-        new Author { Id = 1, FirstName = "Jane", LastName = "Austen", YearOfBirth = 1775 },
-        new Author { Id = 2, FirstName = "Charlotte", LastName = "Bronte", YearOfBirth = 1816 },
-        new Author { Id = 3, FirstName = "Emily", LastName = "Bronte", YearOfBirth = 1818 },
-        new Author { Id = 4, FirstName = "Veronica", LastName = "Roth", YearOfBirth = 1988 }
-    ]; */
-
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(Author), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ReadAuthorDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Author>> GetById(int id)
+    public async Task<ActionResult<ReadAuthorDTO>> GetById(int id)
     {
         var author = await dbContext.Authors.FindAsync(id);
 
@@ -29,21 +23,37 @@ public class AuthorsController(LibraryDbContext dbContext) : ControllerBase
                 statusCode: StatusCodes.Status404NotFound
             );
 
-        return Ok(author);
+        var readAuthorDTO = new ReadAuthorDTO
+        {
+            Id = author.Id,
+            FirstName = author.FirstName,
+            LastName = author.LastName,
+            YearOfBirth = author.YearOfBirth
+        };
+
+        return Ok(readAuthorDTO);
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(Author), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<Author>>> GetAll()
+    [ProducesResponseType(typeof(List<ReadAuthorDTO>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ReadAuthorDTO>>> GetAll()
     {
         var authors = await dbContext.Authors.ToListAsync();
-        return Ok(authors);
+        var readAuthorDTOs = authors.Select(author =>
+            new ReadAuthorDTO
+            {
+                Id = author.Id,
+                FirstName = author.FirstName,
+                LastName = author.LastName,
+                YearOfBirth = author.YearOfBirth
+            }).ToList();
+        return Ok(readAuthorDTOs);
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(Author), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ReadAuthorDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Author>> Create(Author newAuthor)
+    public async Task<ActionResult<ReadAuthorDTO>> Create(CreateAuthorDTO newAuthor)
     {
         if (string.IsNullOrWhiteSpace(newAuthor.FirstName)
             || string.IsNullOrWhiteSpace(newAuthor.LastName))
@@ -54,20 +64,35 @@ public class AuthorsController(LibraryDbContext dbContext) : ControllerBase
             );
         }
 
-        dbContext.Authors.Add(newAuthor);
+        var author = new Author
+        {
+            FirstName = newAuthor.FirstName,
+            LastName = newAuthor.LastName,
+            YearOfBirth = newAuthor.YearOfBirth
+        };
+
+        dbContext.Authors.Add(author);
         await dbContext.SaveChangesAsync();
+
+        var readAuthorDto = new ReadAuthorDTO
+        {
+            Id = author.Id,
+            FirstName = author.FirstName,
+            LastName = author.LastName,
+            YearOfBirth = author.YearOfBirth
+        };
 
         return CreatedAtAction(
             nameof(GetById),
-            new { id = newAuthor.Id },
-            newAuthor);
+            new { id = readAuthorDto.Id },
+            readAuthorDto);
     }
 
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(Author), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ReadAuthorDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Author>> Update(int id, Author updatedAuthor)
+    public async Task<ActionResult<ReadAuthorDTO>> Update(int id, UpdateAuthorDTO updatedAuthor)
     {
         if (string.IsNullOrWhiteSpace(updatedAuthor.FirstName)
             || string.IsNullOrWhiteSpace(updatedAuthor.LastName))
@@ -92,7 +117,15 @@ public class AuthorsController(LibraryDbContext dbContext) : ControllerBase
 
         await dbContext.SaveChangesAsync();
 
-        return Ok(author);
+        var readAuthorDto = new ReadAuthorDTO
+        {
+            Id = author.Id,
+            FirstName = author.FirstName,
+            LastName = author.LastName,
+            YearOfBirth = author.YearOfBirth
+        };
+
+        return Ok(readAuthorDto);
     }
 
     [HttpDelete("{id:int}")]

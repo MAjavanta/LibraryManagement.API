@@ -1,4 +1,5 @@
 using LibraryManagement.API.DataAccess;
+using LibraryManagement.API.DTOs.Categories;
 using LibraryManagement.API.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -35,13 +36,20 @@ public static class CategoriesEndpoint
             .ProducesProblem(StatusCodes.Status409Conflict);
 
     }
-    private static async Task<Ok<List<Category>>> GetAll(LibraryDbContext dbContext)
+    private static async Task<Ok<List<ReadCategoryDTO>>> GetAll(LibraryDbContext dbContext)
     {
         var categories = await dbContext.Categories.ToListAsync();
-        return TypedResults.Ok(categories);
+        var readCatDtos = categories.Select(category =>
+            new ReadCategoryDTO
+            {
+                Id = category.Id,
+                Name = category.Name
+            }).ToList();
+
+        return TypedResults.Ok(readCatDtos);
     }
 
-    private static async Task<Results<Ok<Category>, ProblemHttpResult>> GetById(
+    private static async Task<Results<Ok<ReadCategoryDTO>, ProblemHttpResult>> GetById(
         int id,
         LibraryDbContext dbContext)
     {
@@ -55,38 +63,55 @@ public static class CategoriesEndpoint
             );
         }
 
-        return TypedResults.Ok(category);
+        var readCatDto = new ReadCategoryDTO
+        {
+            Id = category.Id,
+            Name = category.Name
+        };
+
+        return TypedResults.Ok(readCatDto);
     }
 
-    private static async Task<Results<CreatedAtRoute<Category>, ProblemHttpResult>> Create(
-        Category category,
+    private static async Task<Results<CreatedAtRoute<ReadCategoryDTO>, ProblemHttpResult>> Create(
+        CreateCategoryDTO createCatDto,
         LibraryDbContext dbContext)
     {
-        if (string.IsNullOrWhiteSpace(category.Name))
+        if (string.IsNullOrWhiteSpace(createCatDto.Name))
             return TypedResults.Problem(
                 detail: "Category name cannot be empty",
                 statusCode: StatusCodes.Status400BadRequest
             );
 
-        if (await dbContext.Categories.AnyAsync(cat => cat.Name == category.Name))
+        if (await dbContext.Categories.AnyAsync(cat => cat.Name == createCatDto.Name))
             return TypedResults.Problem(
-                detail: $"Category Name: {category.Name} already exists",
+                detail: $"Category Name: {createCatDto.Name} already exists",
                 statusCode: StatusCodes.Status409Conflict
             );
+
+        var category = new Category
+        {
+            Name = createCatDto.Name
+        };
 
         dbContext.Categories.Add(category);
         await dbContext.SaveChangesAsync();
 
+        var readCatDto = new ReadCategoryDTO
+        {
+            Id = category.Id,
+            Name = category.Name
+        };
+
         return TypedResults.CreatedAtRoute(
-            category,
+            readCatDto,
             GET_BY_ID,
-            new { Id = category.Id }
+            new { Id = readCatDto.Id }
         );
     }
 
-    private static async Task<Results<Ok<Category>, ProblemHttpResult>> Update(
+    private static async Task<Results<Ok<ReadCategoryDTO>, ProblemHttpResult>> Update(
         int id,
-        Category updatedCategory,
+        UpdateCategoryDTO updatedCategory,
         LibraryDbContext dbContext
     )
     {
@@ -117,7 +142,13 @@ public static class CategoriesEndpoint
         ogCategory.Name = updatedCategory.Name;
         await dbContext.SaveChangesAsync();
 
-        return TypedResults.Ok(ogCategory);
+        var readCatDto = new ReadCategoryDTO
+        {
+            Id = ogCategory.Id,
+            Name = ogCategory.Name
+        };
+
+        return TypedResults.Ok(readCatDto);
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
