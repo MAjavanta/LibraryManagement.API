@@ -1,12 +1,12 @@
 using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.Endpoints;
+using LibraryManagement.API.Mapping;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddRouting(opt => opt.LowercaseUrls = true);
@@ -14,6 +14,8 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("LibraryDb")
     ));
+builder.Services.AddScoped<AuthorMapper>();
+builder.Services.AddScoped<CategoryMapper>();
 
 var app = builder.Build();
 

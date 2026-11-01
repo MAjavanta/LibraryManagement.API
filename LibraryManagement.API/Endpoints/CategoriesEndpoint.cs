@@ -1,6 +1,6 @@
 using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.DTOs.Categories;
-using LibraryManagement.API.Entities;
+using LibraryManagement.API.Mapping;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,22 +36,20 @@ public static class CategoriesEndpoint
             .ProducesProblem(StatusCodes.Status409Conflict);
 
     }
-    private static async Task<Ok<List<ReadCategoryDTO>>> GetAll(LibraryDbContext dbContext)
+    private static async Task<Ok<List<ReadCategoryDTO>>> GetAll(
+        LibraryDbContext dbContext,
+        CategoryMapper mapper)
     {
         var categories = await dbContext.Categories.ToListAsync();
-        var readCatDtos = categories.Select(category =>
-            new ReadCategoryDTO
-            {
-                Id = category.Id,
-                Name = category.Name
-            }).ToList();
+        var readCatDtos = categories.Select(mapper.ToReadDto).ToList();
 
         return TypedResults.Ok(readCatDtos);
     }
 
     private static async Task<Results<Ok<ReadCategoryDTO>, ProblemHttpResult>> GetById(
         int id,
-        LibraryDbContext dbContext)
+        LibraryDbContext dbContext,
+        CategoryMapper mapper)
     {
         var category = await dbContext.Categories.FindAsync(id);
 
@@ -63,18 +61,13 @@ public static class CategoriesEndpoint
             );
         }
 
-        var readCatDto = new ReadCategoryDTO
-        {
-            Id = category.Id,
-            Name = category.Name
-        };
-
-        return TypedResults.Ok(readCatDto);
+        return TypedResults.Ok(mapper.ToReadDto(category));
     }
 
     private static async Task<Results<CreatedAtRoute<ReadCategoryDTO>, ProblemHttpResult>> Create(
         CreateCategoryDTO createCatDto,
-        LibraryDbContext dbContext)
+        LibraryDbContext dbContext,
+        CategoryMapper mapper)
     {
         if (string.IsNullOrWhiteSpace(createCatDto.Name))
             return TypedResults.Problem(
@@ -88,19 +81,12 @@ public static class CategoriesEndpoint
                 statusCode: StatusCodes.Status409Conflict
             );
 
-        var category = new Category
-        {
-            Name = createCatDto.Name
-        };
+        var category = mapper.ToEntity(createCatDto);
 
         dbContext.Categories.Add(category);
         await dbContext.SaveChangesAsync();
 
-        var readCatDto = new ReadCategoryDTO
-        {
-            Id = category.Id,
-            Name = category.Name
-        };
+        var readCatDto = mapper.ToReadDto(category);
 
         return TypedResults.CreatedAtRoute(
             readCatDto,
@@ -112,7 +98,8 @@ public static class CategoriesEndpoint
     private static async Task<Results<Ok<ReadCategoryDTO>, ProblemHttpResult>> Update(
         int id,
         UpdateCategoryDTO updatedCategory,
-        LibraryDbContext dbContext
+        LibraryDbContext dbContext,
+        CategoryMapper mapper
     )
     {
         if (string.IsNullOrWhiteSpace(updatedCategory.Name))
@@ -139,16 +126,10 @@ public static class CategoriesEndpoint
             );
         }
 
-        ogCategory.Name = updatedCategory.Name;
+        mapper.UpdateEntity(updatedCategory, ogCategory);
         await dbContext.SaveChangesAsync();
 
-        var readCatDto = new ReadCategoryDTO
-        {
-            Id = ogCategory.Id,
-            Name = ogCategory.Name
-        };
-
-        return TypedResults.Ok(readCatDto);
+        return TypedResults.Ok(mapper.ToReadDto(ogCategory));
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
