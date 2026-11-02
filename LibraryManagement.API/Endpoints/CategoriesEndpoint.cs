@@ -1,7 +1,10 @@
+using FluentValidation;
 using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.DTOs.Categories;
+using LibraryManagement.API.Extensions;
 using LibraryManagement.API.Mapping;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.API.Endpoints;
@@ -67,13 +70,13 @@ public static class CategoriesEndpoint
     private static async Task<Results<CreatedAtRoute<ReadCategoryDTO>, ProblemHttpResult>> Create(
         CreateCategoryDTO createCatDto,
         LibraryDbContext dbContext,
-        CategoryMapper mapper)
+        CategoryMapper mapper,
+        IValidator<CreateCategoryDTO> validator)
     {
-        if (string.IsNullOrWhiteSpace(createCatDto.Name))
-            return TypedResults.Problem(
-                detail: "Category name cannot be empty",
-                statusCode: StatusCodes.Status400BadRequest
-            );
+        var validationResult = await validator.ValidateAsync(createCatDto);
+
+        if (!validationResult.IsValid)
+            return validationResult.ToProblem();
 
         if (await dbContext.Categories.AnyAsync(cat => cat.Name == createCatDto.Name))
             return TypedResults.Problem(
@@ -99,14 +102,13 @@ public static class CategoriesEndpoint
         int id,
         UpdateCategoryDTO updatedCategory,
         LibraryDbContext dbContext,
-        CategoryMapper mapper
+        CategoryMapper mapper,
+        IValidator<UpdateCategoryDTO> validator
     )
     {
-        if (string.IsNullOrWhiteSpace(updatedCategory.Name))
-            return TypedResults.Problem(
-                detail: "Category name cannot be empty",
-                statusCode: StatusCodes.Status400BadRequest
-            );
+        var validationResult = await validator.ValidateAsync(updatedCategory);
+        if (!validationResult.IsValid)
+            return validationResult.ToProblem();
 
         var ogCategory = await dbContext.Categories.FindAsync(id);
 
