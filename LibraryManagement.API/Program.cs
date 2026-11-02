@@ -3,6 +3,7 @@ using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.DTOs.Categories;
 using LibraryManagement.API.Endpoints;
 using LibraryManagement.API.Mapping;
+using LibraryManagement.API.Middleware;
 using LibraryManagement.API.Validator.Categories;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -21,8 +22,13 @@ builder.Services.AddScoped<AuthorMapper>();
 builder.Services.AddScoped<CategoryMapper>();
 builder.Services.AddScoped<IValidator<CreateCategoryDTO>, CreateCategoryValidator>();
 builder.Services.AddScoped<IValidator<UpdateCategoryDTO>, UpdateCategoryValidator>();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseHttpsRedirection();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -31,8 +37,6 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
     await DataSeeder.SeedData(app.Services);
 }
-
-app.UseHttpsRedirection();
 
 app.MapCategories();
 app.MapControllers();
