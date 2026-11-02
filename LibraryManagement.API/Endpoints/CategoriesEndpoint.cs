@@ -2,6 +2,7 @@ using FluentValidation;
 using LibraryManagement.API.DataAccess;
 using LibraryManagement.API.DTOs.Categories;
 using LibraryManagement.API.Extensions;
+using LibraryManagement.API.Filters;
 using LibraryManagement.API.Mapping;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,7 @@ public static class CategoriesEndpoint
             .WithName(GET_BY_ID);
 
         group.MapPut("/{id:int}", Update)
+            .AddEndpointFilter<ValidationFilter<UpdateCategoryDTO>>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -35,6 +37,7 @@ public static class CategoriesEndpoint
         group.MapGet("/", GetAll);
 
         group.MapPost("/", Create)
+            .AddEndpointFilter<ValidationFilter<CreateCategoryDTO>>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
