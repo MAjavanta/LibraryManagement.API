@@ -8,7 +8,8 @@ public class UpdateCategoryValidator : AbstractValidator<UpdateCategoryDTO>
     public UpdateCategoryValidator()
     {
         RuleFor(dto => dto.Name)
-            .NotEmpty();
+            .NotEmpty()
+            .MaximumLength(50);
     }
 }
 
