@@ -73,14 +73,8 @@ public static class CategoriesEndpoint
     private static async Task<Results<CreatedAtRoute<ReadCategoryDTO>, ProblemHttpResult>> Create(
         CreateCategoryDTO createCatDto,
         LibraryDbContext dbContext,
-        CategoryMapper mapper,
-        IValidator<CreateCategoryDTO> validator)
+        CategoryMapper mapper)
     {
-        var validationResult = await validator.ValidateAsync(createCatDto);
-
-        if (!validationResult.IsValid)
-            return validationResult.ToProblem();
-
         if (await dbContext.Categories.AnyAsync(cat => cat.Name == createCatDto.Name))
             return TypedResults.Problem(
                 detail: $"Category Name: {createCatDto.Name} already exists",
@@ -105,14 +99,9 @@ public static class CategoriesEndpoint
         int id,
         UpdateCategoryDTO updatedCategory,
         LibraryDbContext dbContext,
-        CategoryMapper mapper,
-        IValidator<UpdateCategoryDTO> validator
+        CategoryMapper mapper
     )
     {
-        var validationResult = await validator.ValidateAsync(updatedCategory);
-        if (!validationResult.IsValid)
-            return validationResult.ToProblem();
-
         var ogCategory = await dbContext.Categories.FindAsync(id);
 
         if (ogCategory is null)
